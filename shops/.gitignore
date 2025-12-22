@@ -4,6 +4,16 @@
 .env.*.local
 !.env.sample
 
+# Documentation files with example API keys (local development only)
+SECURE_SETUP_COMPLETE.md
+GOOGLE_MAPS_API_KEY_SECURITY.md
+SECRETS_MANAGEMENT.md
+GOOGLE_MAPS_RESTORED.md
+
+# Local build configuration - may contain API keys
+android/local.properties
+local.properties
+
 # Miscellaneous
 *.class
 *.log
