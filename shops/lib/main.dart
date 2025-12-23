@@ -47,60 +47,127 @@ class MapScreen extends StatefulWidget {
 
 class _MapScreenState extends State<MapScreen> {
   GoogleMapController? mapController;
-  final Set<Marker> markers = {};
+  final Set<Marker> _markers = {};
+  final TextEditingController _searchController = TextEditingController();
+  StoreLocation? _selectedLocation;
+  String _searchQuery = '';
+  List<StoreLocation> _searchResults = [];
   int _selectedIndex = 1;
 
-  static const LatLng _minneapolis = LatLng(44.9778, -93.2650);
+  static const LatLng _buffaloDowntown = LatLng(45.1718, -93.8746);
 
-  static const List<FavoriteLocation> favoriteLocations = [
-    FavoriteLocation(
-      name: 'Cafe Luna',
-      address: '123 Elm St., St. Paul, MN',
-      icon: Icons.coffee,
+  static const List<StoreLocation> storeLocations = [
+    StoreLocation(
+      name: 'Biggs & Company',
+      address: '15 Central Ave, Buffalo, MN',
+      icon: Icons.storefront,
       iconColor: Color(0xFF10A653),
-      position: LatLng(44.9537, -93.0899),
+      isOpen: true,
+      position: LatLng(45.1721, -93.8748),
     ),
-    FavoriteLocation(
-      name: 'Café Luna',
-      address: '123 Elm St., St. Paul, MN',
+    StoreLocation(
+      name: "Evelyn's Wine Bar",
+      address: '14 Central Ave, Buffalo, MN',
+      icon: Icons.wine_bar,
+      iconColor: Color(0xFFE85D75),
+      isOpen: true,
+      position: LatLng(45.1718, -93.8745),
+    ),
+    StoreLocation(
+      name: 'Buffalo Books & Coffee',
+      address: '6 Division St E, Buffalo, MN',
       icon: Icons.local_cafe,
-      iconColor: Color(0xFFFF9D2B),
-      position: LatLng(44.9483, -93.1093),
-    ),
-    FavoriteLocation(
-      name: 'Target',
-      address: 'Mall of America, Bloomington, MN',
-      icon: Icons.shopping_bag,
-      iconColor: Color(0xFF10A653),
-      position: LatLng(44.8549, -93.2422),
-    ),
-    FavoriteLocation(
-      name: 'Work',
-      address: '450 Cedar Ave., Minneapolis, MN',
-      icon: Icons.work,
       iconColor: Color(0xFF0069D9),
-      position: LatLng(44.9681, -93.2472),
+      isOpen: false,
+      position: LatLng(45.1716, -93.8755),
+    ),
+    StoreLocation(
+      name: "BJ's Deli",
+      address: '15 Division St E, Buffalo, MN',
+      icon: Icons.lunch_dining,
+      iconColor: Color(0xFFFF9D2B),
+      isOpen: true,
+      position: LatLng(45.1723, -93.8751),
+    ),
+    StoreLocation(
+      name: 'The Porch on Buffalo',
+      address: '3 Division St E, Buffalo, MN',
+      icon: Icons.chair,
+      iconColor: Color(0xFF7B5DBA),
+      isOpen: false,
+      position: LatLng(45.1713, -93.8739),
+    ),
+    StoreLocation(
+      name: 'Tangled Salon & Spa',
+      address: '2 Central Ave, Buffalo, MN',
+      icon: Icons.spa,
+      iconColor: Color(0xFF10A653),
+      isOpen: true,
+      position: LatLng(45.1726, -93.8740),
+    ),
+    StoreLocation(
+      name: 'Thrifty White Pharmacy',
+      address: '12 Division St E, Buffalo, MN',
+      icon: Icons.local_pharmacy,
+      iconColor: Color(0xFF0069D9),
+      isOpen: true,
+      position: LatLng(45.1709, -93.8744),
+    ),
+    StoreLocation(
+      name: 'Rustic Arbor',
+      address: '16 Division St W, Buffalo, MN',
+      icon: Icons.park,
+      iconColor: Color(0xFF7B5DBA),
+      isOpen: false,
+      position: LatLng(45.1719, -93.8758),
+    ),
+    StoreLocation(
+      name: 'Lillians of Buffalo',
+      address: '3 Central Ave, Buffalo, MN',
+      icon: Icons.shopping_bag,
+      iconColor: Color(0xFFE85D75),
+      isOpen: true,
+      position: LatLng(45.1710, -93.8738),
+    ),
+    StoreLocation(
+      name: 'Sunrise Nutrition',
+      address: '8 Division St W, Buffalo, MN',
+      icon: Icons.emoji_food_beverage,
+      iconColor: Color(0xFFFF9D2B),
+      isOpen: false,
+      position: LatLng(45.1720, -93.8736),
     ),
   ];
 
   @override
   void initState() {
     super.initState();
-    _addMarkers();
+    _selectedLocation = storeLocations.firstWhere(
+      (location) => location.name == 'Biggs & Company',
+      orElse: () => storeLocations.first,
+    );
+    _refreshMarkers();
   }
 
-  void _addMarkers() {
-    for (var location in favoriteLocations) {
-      markers.add(
-        Marker(
+  void _refreshMarkers() {
+    _markers
+      ..clear()
+      ..addAll(storeLocations.map((location) {
+        final isSelected = _selectedLocation?.name == location.name;
+
+        return Marker(
           markerId: MarkerId(location.name),
           position: location.position,
-          infoWindow: InfoWindow(title: location.name, snippet: location.address),
-          icon: BitmapDescriptor.defaultMarkerWithHue(location.iconHue),
-          onTap: () => _animateTo(location.position, zoom: 14.5),
-        ),
-      );
-    }
+          infoWindow: InfoWindow(
+            title: location.name,
+            snippet: '${location.address}\n${location.statusLabel}',
+          ),
+          icon: BitmapDescriptor.defaultMarkerWithHue(
+            isSelected ? BitmapDescriptor.hueAzure : location.iconHue,
+          ),
+          onTap: () => _selectLocation(location),
+        );
+      }));
   }
 
   void _onMapCreated(GoogleMapController controller) {
@@ -113,6 +180,37 @@ class _MapScreenState extends State<MapScreen> {
 
   void _zoomOut() {
     mapController?.animateCamera(CameraUpdate.zoomOut());
+  }
+
+  void _selectLocation(StoreLocation location) {
+    setState(() {
+      _selectedLocation = location;
+      _refreshMarkers();
+    });
+
+    _animateTo(location.position, zoom: 16);
+  }
+
+  void _handleSearchChanged(String value) {
+    setState(() {
+      _searchQuery = value;
+      _searchResults = value.isEmpty
+          ? []
+          : storeLocations
+              .where((location) =>
+                  location.name.toLowerCase().contains(value.toLowerCase()))
+              .toList();
+    });
+  }
+
+  void _handleSearchSelection(StoreLocation location) {
+    _searchController.text = location.name;
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _searchQuery = location.name;
+      _searchResults = [];
+    });
+    _selectLocation(location);
   }
 
   void _animateTo(LatLng target, {double zoom = 13.5}) {
@@ -132,9 +230,11 @@ class _MapScreenState extends State<MapScreen> {
                 children: [
                   GoogleMap(
                     onMapCreated: _onMapCreated,
-                    initialCameraPosition:
-                        const CameraPosition(target: _minneapolis, zoom: 12.5),
-                    markers: markers,
+                    initialCameraPosition: CameraPosition(
+                      target: _selectedLocation?.position ?? _buffaloDowntown,
+                      zoom: 15.5,
+                    ),
+                    markers: _markers,
                     mapType: MapType.normal,
                     myLocationEnabled: true,
                     myLocationButtonEnabled: false,
@@ -146,46 +246,89 @@ class _MapScreenState extends State<MapScreen> {
                     top: 16,
                     left: 16,
                     right: 16,
-                    child: Row(
+                    child: Column(
                       children: [
-                        _CircleIconButton(
-                          icon: Icons.menu,
-                          onPressed: () {},
-                          backgroundColor: Colors.white,
-                          iconColor: theme.colorScheme.onSurface,
+                        Row(
+                          children: [
+                            _CircleIconButton(
+                              icon: Icons.menu,
+                              onPressed: () {},
+                              backgroundColor: Colors.white,
+                              iconColor: theme.colorScheme.onSurface,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Material(
+                                elevation: 4,
+                                borderRadius: BorderRadius.circular(28),
+                                child: Container(
+                                  height: 52,
+                                  padding:
+                                      const EdgeInsets.symmetric(horizontal: 16),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(28),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.search,
+                                          color: theme.colorScheme.primary),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: TextField(
+                                          controller: _searchController,
+                                          onChanged: _handleSearchChanged,
+                                          decoration: const InputDecoration(
+                                            hintText: 'Search for a place...',
+                                          ),
+                                        ),
+                                      ),
+                                      Icon(Icons.favorite,
+                                          color: theme.colorScheme.primary),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Material(
+                        if (_searchResults.isNotEmpty && _searchQuery.isNotEmpty)
+                          const SizedBox(height: 8),
+                        if (_searchResults.isNotEmpty && _searchQuery.isNotEmpty)
+                          Material(
                             elevation: 4,
-                            borderRadius: BorderRadius.circular(28),
+                            borderRadius: BorderRadius.circular(16),
                             child: Container(
-                              height: 52,
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 16),
+                              width: double.infinity,
+                              constraints: const BoxConstraints(maxHeight: 240),
                               decoration: BoxDecoration(
                                 color: Colors.white,
-                                borderRadius: BorderRadius.circular(28),
+                                borderRadius: BorderRadius.circular(16),
                               ),
-                              child: Row(
-                                children: [
-                                  Icon(Icons.search,
-                                      color: theme.colorScheme.primary),
-                                  const SizedBox(width: 8),
-                                  const Expanded(
-                                    child: TextField(
-                                      decoration: InputDecoration(
-                                        hintText: 'Search for a place...',
-                                      ),
+                              child: ListView.separated(
+                                shrinkWrap: true,
+                                itemCount: _searchResults.length,
+                                separatorBuilder: (_, __) => const Divider(height: 1),
+                                itemBuilder: (context, index) {
+                                  final result = _searchResults[index];
+                                  return ListTile(
+                                    title: Text(result.name),
+                                    subtitle: Text(result.address),
+                                    trailing: Icon(
+                                      result.isOpen
+                                          ? Icons.circle
+                                          : Icons.circle_outlined,
+                                      size: 12,
+                                      color: result.isOpen
+                                          ? theme.colorScheme.primary
+                                          : Colors.grey,
                                     ),
-                                  ),
-                                  Icon(Icons.favorite,
-                                      color: theme.colorScheme.primary),
-                                ],
+                                    onTap: () => _handleSearchSelection(result),
+                                  );
+                                },
                               ),
                             ),
                           ),
-                        ),
                       ],
                     ),
                   ),
@@ -193,8 +336,8 @@ class _MapScreenState extends State<MapScreen> {
                     top: 94,
                     left: 24,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 8),
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(8),
@@ -207,7 +350,7 @@ class _MapScreenState extends State<MapScreen> {
                         ],
                       ),
                       child: const Text(
-                        'Minneapolis',
+                        'Downtown Buffalo',
                         style: TextStyle(fontWeight: FontWeight.w600),
                       ),
                     ),
@@ -234,7 +377,9 @@ class _MapScreenState extends State<MapScreen> {
                         ),
                         const SizedBox(height: 16),
                         ElevatedButton.icon(
-                          onPressed: () => _animateTo(_minneapolis),
+                          onPressed: () => _animateTo(
+                            _selectedLocation?.position ?? _buffaloDowntown,
+                          ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: theme.colorScheme.primary,
                             foregroundColor: theme.colorScheme.onPrimary,
@@ -289,7 +434,7 @@ class _MapScreenState extends State<MapScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              '${favoriteLocations.length} Places Found',
+                              '${storeLocations.length} Places Found',
                               style: const TextStyle(color: Colors.black54),
                             ),
                           ],
@@ -302,13 +447,15 @@ class _MapScreenState extends State<MapScreen> {
                   ListView.separated(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
-                    itemCount: favoriteLocations.length,
+                    itemCount: storeLocations.length,
                     separatorBuilder: (_, __) => const SizedBox(height: 12),
                     itemBuilder: (context, index) {
-                      final location = favoriteLocations[index];
+                      final location = storeLocations[index];
+                      final isSelected = _selectedLocation?.name == location.name;
                       return _LocationTile(
                         location: location,
-                        onTap: () => _animateTo(location.position, zoom: 14.5),
+                        isSelected: isSelected,
+                        onTap: () => _selectLocation(location),
                       );
                     },
                   ),
@@ -335,32 +482,42 @@ class _MapScreenState extends State<MapScreen> {
   @override
   void dispose() {
     mapController?.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 }
 
-class FavoriteLocation {
+class StoreLocation {
   final String name;
   final String address;
   final IconData icon;
   final Color iconColor;
   final LatLng position;
+  final bool isOpen;
 
-  const FavoriteLocation({
+  const StoreLocation({
     required this.name,
     required this.address,
     required this.icon,
     required this.iconColor,
     required this.position,
+    required this.isOpen,
   });
 
   double get iconHue => HSVColor.fromColor(iconColor).hue;
+
+  String get statusLabel => isOpen ? 'Open now' : 'Closed';
 }
 
 class _LocationTile extends StatelessWidget {
-  const _LocationTile({required this.location, required this.onTap});
+  const _LocationTile({
+    required this.location,
+    required this.isSelected,
+    required this.onTap,
+  });
 
-  final FavoriteLocation location;
+  final StoreLocation location;
+  final bool isSelected;
   final VoidCallback onTap;
 
   @override
@@ -368,7 +525,7 @@ class _LocationTile extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Material(
-      color: const Color(0xFFF8FAFB),
+      color: isSelected ? const Color(0xFFE8F5E9) : const Color(0xFFF8FAFB),
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
@@ -402,6 +559,16 @@ class _LocationTile extends StatelessWidget {
                       location.address,
                       style: TextStyle(
                         color: theme.colorScheme.onSurface.withOpacity(0.6),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      location.statusLabel,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: location.isOpen
+                            ? theme.colorScheme.primary
+                            : theme.colorScheme.onSurface.withOpacity(0.6),
                       ),
                     ),
                   ],
