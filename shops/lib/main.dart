@@ -54,6 +54,9 @@ class _MapScreenState extends State<MapScreen> {
   List<StoreLocation> _searchResults = [];
   int _selectedIndex = 1;
 
+  // Track marker state separately to avoid rebuilding on every UI change
+  bool _markersDirty = true;
+
   static const LatLng _buffaloDowntown = LatLng(45.1718, -93.8746);
 
   static const List<StoreLocation> storeLocations = [
@@ -150,24 +153,31 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   void _refreshMarkers() {
+    // Only rebuild markers if needed
+    if (!_markersDirty && _markers.isNotEmpty) return;
+
     _markers
       ..clear()
-      ..addAll(storeLocations.map((location) {
-        final isSelected = _selectedLocation?.name == location.name;
+      ..addAll(
+        storeLocations.map((location) {
+          final isSelected = _selectedLocation?.name == location.name;
 
-        return Marker(
-          markerId: MarkerId(location.name),
-          position: location.position,
-          infoWindow: InfoWindow(
-            title: location.name,
-            snippet: '${location.address}\n${location.statusLabel}',
-          ),
-          icon: BitmapDescriptor.defaultMarkerWithHue(
-            isSelected ? BitmapDescriptor.hueAzure : location.iconHue,
-          ),
-          onTap: () => _selectLocation(location),
-        );
-      }));
+          return Marker(
+            markerId: MarkerId(location.name),
+            position: location.position,
+            infoWindow: InfoWindow(
+              title: location.name,
+              snippet: '${location.address}\n${location.statusLabel}',
+            ),
+            icon: BitmapDescriptor.defaultMarkerWithHue(
+              isSelected ? BitmapDescriptor.hueAzure : location.iconHue,
+            ),
+            onTap: () => _selectLocation(location),
+          );
+        }),
+      );
+
+    _markersDirty = false;
   }
 
   void _onMapCreated(GoogleMapController controller) {
@@ -185,7 +195,7 @@ class _MapScreenState extends State<MapScreen> {
   void _selectLocation(StoreLocation location) {
     setState(() {
       _selectedLocation = location;
-      _refreshMarkers();
+      _markersDirty = true; // Mark that markers need refresh
     });
 
     _animateTo(location.position, zoom: 16);
@@ -197,9 +207,12 @@ class _MapScreenState extends State<MapScreen> {
       _searchResults = value.isEmpty
           ? []
           : storeLocations
-              .where((location) =>
-                  location.name.toLowerCase().contains(value.toLowerCase()))
-              .toList();
+                .where(
+                  (location) =>
+                      location.name.toLowerCase().contains(value.toLowerCase()),
+                )
+                .toList();
+      // Don't refresh markers on search - only when location is selected
     });
   }
 
@@ -209,8 +222,9 @@ class _MapScreenState extends State<MapScreen> {
     setState(() {
       _searchQuery = location.name;
       _searchResults = [];
+      // Don't refresh markers here - let _selectLocation handle it
     });
-    _selectLocation(location);
+    _selectLocation(location); // This will mark markers dirty
   }
 
   void _animateTo(LatLng target, {double zoom = 13.5}) {
@@ -220,6 +234,10 @@ class _MapScreenState extends State<MapScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
+    // Refresh markers only if they're marked as dirty
+    // This happens outside setState to avoid unnecessary rebuilds
+    _refreshMarkers();
 
     return Scaffold(
       body: SafeArea(
@@ -263,16 +281,19 @@ class _MapScreenState extends State<MapScreen> {
                                 borderRadius: BorderRadius.circular(28),
                                 child: Container(
                                   height: 52,
-                                  padding:
-                                      const EdgeInsets.symmetric(horizontal: 16),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: Colors.white,
                                     borderRadius: BorderRadius.circular(28),
                                   ),
                                   child: Row(
                                     children: [
-                                      Icon(Icons.search,
-                                          color: theme.colorScheme.primary),
+                                      Icon(
+                                        Icons.search,
+                                        color: theme.colorScheme.primary,
+                                      ),
                                       const SizedBox(width: 8),
                                       Expanded(
                                         child: TextField(
@@ -283,8 +304,10 @@ class _MapScreenState extends State<MapScreen> {
                                           ),
                                         ),
                                       ),
-                                      Icon(Icons.favorite,
-                                          color: theme.colorScheme.primary),
+                                      Icon(
+                                        Icons.favorite,
+                                        color: theme.colorScheme.primary,
+                                      ),
                                     ],
                                   ),
                                 ),
@@ -292,9 +315,11 @@ class _MapScreenState extends State<MapScreen> {
                             ),
                           ],
                         ),
-                        if (_searchResults.isNotEmpty && _searchQuery.isNotEmpty)
+                        if (_searchResults.isNotEmpty &&
+                            _searchQuery.isNotEmpty)
                           const SizedBox(height: 8),
-                        if (_searchResults.isNotEmpty && _searchQuery.isNotEmpty)
+                        if (_searchResults.isNotEmpty &&
+                            _searchQuery.isNotEmpty)
                           Material(
                             elevation: 4,
                             borderRadius: BorderRadius.circular(16),
@@ -308,7 +333,8 @@ class _MapScreenState extends State<MapScreen> {
                               child: ListView.separated(
                                 shrinkWrap: true,
                                 itemCount: _searchResults.length,
-                                separatorBuilder: (_, __) => const Divider(height: 1),
+                                separatorBuilder: (_, __) =>
+                                    const Divider(height: 1),
                                 itemBuilder: (context, index) {
                                   final result = _searchResults[index];
                                   return ListTile(
@@ -330,29 +356,6 @@ class _MapScreenState extends State<MapScreen> {
                             ),
                           ),
                       ],
-                    ),
-                  ),
-                  Positioned(
-                    top: 94,
-                    left: 24,
-                    child: Container(
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(8),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 6,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: const Text(
-                        'Downtown Buffalo',
-                        style: TextStyle(fontWeight: FontWeight.w600),
-                      ),
                     ),
                   ),
                   Positioned(
@@ -400,67 +403,72 @@ class _MapScreenState extends State<MapScreen> {
                 ],
               ),
             ),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(16, 20, 16, 4),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.06),
-                    blurRadius: 10,
-                    offset: const Offset(0, -2),
+            Expanded(
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(16, 20, 16, 4),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(24),
                   ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Favorite Locations',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '${storeLocations.length} Places Found',
-                              style: const TextStyle(color: Colors.black54),
-                            ),
-                          ],
-                        ),
-                        Icon(Icons.tune, color: theme.colorScheme.primary),
-                      ],
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.06),
+                      blurRadius: 10,
+                      offset: const Offset(0, -2),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  ListView.separated(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: storeLocations.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 12),
-                    itemBuilder: (context, index) {
-                      final location = storeLocations[index];
-                      final isSelected = _selectedLocation?.name == location.name;
-                      return _LocationTile(
-                        location: location,
-                        isSelected: isSelected,
-                        onTap: () => _selectLocation(location),
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 8),
-                ],
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Favorite Locations',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '${storeLocations.length} Places Found',
+                                style: const TextStyle(color: Colors.black54),
+                              ),
+                            ],
+                          ),
+                          Icon(Icons.tune, color: theme.colorScheme.primary),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Expanded(
+                      child: ListView.separated(
+                        itemCount: storeLocations.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 12),
+                        itemBuilder: (context, index) {
+                          final location = storeLocations[index];
+                          final isSelected =
+                              _selectedLocation?.name == location.name;
+                          return _LocationTile(
+                            location: location,
+                            isSelected: isSelected,
+                            onTap: () => _selectLocation(location),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                ),
               ),
             ),
           ],
@@ -468,7 +476,8 @@ class _MapScreenState extends State<MapScreen> {
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
-        onDestinationSelected: (index) => setState(() => _selectedIndex = index),
+        onDestinationSelected: (index) =>
+            setState(() => _selectedIndex = index),
         destinations: const [
           NavigationDestination(icon: Icon(Icons.explore), label: 'Explore'),
           NavigationDestination(icon: Icon(Icons.favorite), label: 'Favorites'),
@@ -574,8 +583,10 @@ class _LocationTile extends StatelessWidget {
                   ],
                 ),
               ),
-              Icon(Icons.chevron_right,
-                  color: theme.colorScheme.onSurface.withOpacity(0.5)),
+              Icon(
+                Icons.chevron_right,
+                color: theme.colorScheme.onSurface.withOpacity(0.5),
+              ),
             ],
           ),
         ),
