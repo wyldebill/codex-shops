@@ -341,8 +341,8 @@
 			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
-			shellScript = "
-";
+			shellPath = /bin/sh;
+			shellScript = "\"$FLUTTER_ROOT/packages/flutter_tools/bin/xcode_backend.sh\" build\n\n";
 		};
 		F9ABB2AE144E02EAF5D87C98 /* [CP] Copy Pods Resources */ = {
 			isa = PBXShellScriptBuildPhase;
