@@ -1,2 +1,8 @@
 #include? "Pods/Target Support Files/Pods-Runner/Pods-Runner.release.xcconfig"
 #include "Generated.xcconfig"
+
+// Allow developers to provide a local xcconfig with `GOOGLE_MAPS_API_KEY` (ignored in git)
+#include? "../Local.xcconfig"
+
+// API key forwarding: INJECTED_GOOGLE_MAPS_API_KEY will be available to Info.plist as $(INJECTED_GOOGLE_MAPS_API_KEY)
+INJECTED_GOOGLE_MAPS_API_KEY = $(GOOGLE_MAPS_API_KEY)
