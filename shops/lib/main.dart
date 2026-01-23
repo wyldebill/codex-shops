@@ -53,6 +53,17 @@ class _MapScreenState extends State<MapScreen> {
   String _searchQuery = '';
   List<StoreLocation> _searchResults = [];
   int _selectedIndex = 1;
+  static const String _mapStyle = '''
+[
+  {
+    "featureType": "all",
+    "elementType": "all",
+    "stylers": [
+      { "visibility": "off" }
+    ]
+  }
+]
+''';
 
   // Track marker state separately to avoid rebuilding on every UI change
   bool _markersDirty = true;
@@ -180,8 +191,9 @@ class _MapScreenState extends State<MapScreen> {
     _markersDirty = false;
   }
 
-  void _onMapCreated(GoogleMapController controller) {
+  Future<void> _onMapCreated(GoogleMapController controller) async {
     mapController = controller;
+    await controller.setMapStyle(_mapStyle);
   }
 
   void _zoomIn() {
