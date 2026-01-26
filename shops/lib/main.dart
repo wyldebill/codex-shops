@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
-// import 'package:shops/config/app_secrets.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:shops/config/app_secrets.dart';
 
 void main() async {
   // Initialize secure configuration (loads .env file)
-  // await AppSecrets.init();
+  await AppSecrets.init();
   runApp(const MyApp());
 }
 
@@ -46,13 +47,14 @@ class MapScreen extends StatefulWidget {
 }
 
 class _MapScreenState extends State<MapScreen> {
-  GoogleMapController? mapController;
-  final Set<Marker> _markers = {};
+  final MapController _mapController = MapController();
+  final List<Marker> _markers = [];
   final TextEditingController _searchController = TextEditingController();
   StoreLocation? _selectedLocation;
   String _searchQuery = '';
   List<StoreLocation> _searchResults = [];
   int _selectedIndex = 1;
+  String _slpyApiKey = '';
 
   // Track marker state separately to avoid rebuilding on every UI change
   bool _markersDirty = true;
@@ -149,6 +151,7 @@ class _MapScreenState extends State<MapScreen> {
       (location) => location.name == 'Biggs & Company',
       orElse: () => storeLocations.first,
     );
+    _slpyApiKey = AppSecrets.googleMapsApiKey;
     _refreshMarkers();
   }
 
@@ -163,16 +166,23 @@ class _MapScreenState extends State<MapScreen> {
           final isSelected = _selectedLocation?.name == location.name;
 
           return Marker(
-            markerId: MarkerId(location.name),
-            position: location.position,
-            infoWindow: InfoWindow(
-              title: location.name,
-              snippet: '${location.address}\n${location.statusLabel}',
+            point: location.position,
+            width: 44,
+            height: 44,
+            alignment: Alignment.topCenter,
+            child: Tooltip(
+              message: '${location.name}\n${location.address}',
+              child: GestureDetector(
+                onTap: () => _selectLocation(location),
+                child: Icon(
+                  Icons.location_on,
+                  size: 38,
+                  color: isSelected
+                      ? Colors.blueAccent
+                      : location.iconColor,
+                ),
+              ),
             ),
-            icon: BitmapDescriptor.defaultMarkerWithHue(
-              isSelected ? BitmapDescriptor.hueAzure : location.iconHue,
-            ),
-            onTap: () => _selectLocation(location),
           );
         }),
       );
@@ -180,16 +190,14 @@ class _MapScreenState extends State<MapScreen> {
     _markersDirty = false;
   }
 
-  void _onMapCreated(GoogleMapController controller) {
-    mapController = controller;
-  }
-
   void _zoomIn() {
-    mapController?.animateCamera(CameraUpdate.zoomIn());
+    final camera = _mapController.camera;
+    _mapController.move(camera.center, camera.zoom + 1);
   }
 
   void _zoomOut() {
-    mapController?.animateCamera(CameraUpdate.zoomOut());
+    final camera = _mapController.camera;
+    _mapController.move(camera.center, camera.zoom - 1);
   }
 
   void _selectLocation(StoreLocation location) {
@@ -228,7 +236,31 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   void _animateTo(LatLng target, {double zoom = 13.5}) {
-    mapController?.animateCamera(CameraUpdate.newLatLngZoom(target, zoom));
+    _mapController.move(target, zoom);
+  }
+
+  Widget _buildMap() {
+    if (_slpyApiKey.isEmpty) {
+      return const Center(
+        child: Text('Missing SLPY maps API key.'),
+      );
+    }
+
+    return FlutterMap(
+      mapController: _mapController,
+      options: MapOptions(
+        initialCenter: _selectedLocation?.position ?? _buffaloDowntown,
+        initialZoom: 15.5,
+      ),
+      children: [
+        TileLayer(
+          urlTemplate:
+              'https://maps.slpy.com/tiles/{z}/{x}/{y}.png?key=$_slpyApiKey',
+          userAgentPackageName: 'shops',
+        ),
+        MarkerLayer(markers: _markers),
+      ],
+    );
   }
 
   @override
@@ -246,20 +278,7 @@ class _MapScreenState extends State<MapScreen> {
             Expanded(
               child: Stack(
                 children: [
-                  GoogleMap(
-                    onMapCreated: _onMapCreated,
-                    initialCameraPosition: CameraPosition(
-                      target: _selectedLocation?.position ?? _buffaloDowntown,
-                      zoom: 15.5,
-                    ),
-                    markers: _markers,
-                    mapType: MapType.normal,
-                    myLocationEnabled: true,
-                    myLocationButtonEnabled: false,
-                    zoomControlsEnabled: false,
-                    compassEnabled: false,
-                    trafficEnabled: false,
-                  ),
+                  _buildMap(),
                   Positioned(
                     top: 16,
                     left: 16,
@@ -490,7 +509,6 @@ class _MapScreenState extends State<MapScreen> {
 
   @override
   void dispose() {
-    mapController?.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -512,8 +530,6 @@ class StoreLocation {
     required this.position,
     required this.isOpen,
   });
-
-  double get iconHue => HSVColor.fromColor(iconColor).hue;
 
   String get statusLabel => isOpen ? 'Open now' : 'Closed';
 }

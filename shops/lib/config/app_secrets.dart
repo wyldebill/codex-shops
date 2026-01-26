@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 /// Secure configuration for API keys and sensitive data
 ///
@@ -8,22 +7,21 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 class AppSecrets {
   static late final String _googleMapsApiKey;
 
-  /// Initialize secrets from .env file
+  /// Initialize secrets from compile-time environment variables
   /// Must be called in main() before accessing any secrets
   static Future<void> init() async {
     try {
-      await dotenv.load(fileName: '.env');
-      _googleMapsApiKey = dotenv.env['GOOGLE_MAPS_API_KEY'] ?? '';
+      _googleMapsApiKey = const String.fromEnvironment('GOOGLE_MAPS_API_KEY');
 
       if (_googleMapsApiKey.isEmpty) {
         if (kDebugMode) {
-          print('WARNING: GOOGLE_MAPS_API_KEY not found in .env file');
-          print('Please copy .env.sample to .env and add your API key');
+          print('WARNING: GOOGLE_MAPS_API_KEY not defined.');
         }
       }
     } catch (e) {
+      _googleMapsApiKey = '';
       if (kDebugMode) {
-        print('Error loading .env file: $e');
+        print('Error loading environment configuration: $e');
       }
     }
   }
