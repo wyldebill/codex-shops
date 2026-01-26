@@ -52,7 +52,7 @@ class _MapScreenState extends State<MapScreen> {
   List<StoreLocation> _searchResults = [];
   int _selectedIndex = 1;
   final String _slpyApiKey =
-      const String.fromEnvironment('GOOGLE_MAPS_API_KEY');
+      const String.fromEnvironment('SLPY_MAPS_API_KEY');
 
   // Track marker state separately to avoid rebuilding on every UI change
   bool _markersDirty = true;
