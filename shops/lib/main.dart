@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:shops/config/app_secrets.dart';
 
 void main() async {
-  // Initialize secure configuration (loads .env file)
-  await AppSecrets.init();
   runApp(const MyApp());
 }
 
@@ -54,7 +51,8 @@ class _MapScreenState extends State<MapScreen> {
   String _searchQuery = '';
   List<StoreLocation> _searchResults = [];
   int _selectedIndex = 1;
-  String _slpyApiKey = '';
+  final String _slpyApiKey =
+      const String.fromEnvironment('GOOGLE_MAPS_API_KEY');
 
   // Track marker state separately to avoid rebuilding on every UI change
   bool _markersDirty = true;
@@ -151,7 +149,6 @@ class _MapScreenState extends State<MapScreen> {
       (location) => location.name == 'Biggs & Company',
       orElse: () => storeLocations.first,
     );
-    _slpyApiKey = AppSecrets.googleMapsApiKey;
     _refreshMarkers();
   }
 
