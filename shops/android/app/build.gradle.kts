@@ -5,17 +5,8 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
-// Load API key from .env file
-val googleMapsApiKey: String by lazy {
-    val envFile = file("../../.env")
-    if (envFile.exists()) {
-        val lines = envFile.readLines()
-        val apiKeyLine = lines.find { it.startsWith("GOOGLE_MAPS_API_KEY=") }
-        apiKeyLine?.substringAfter("=")?.trim() ?: ""
-    } else {
-        ""
-    }
-}
+// Read Google Maps API key from environment variable
+val googleMapsApiKey: String = System.getenv("GOOGLE_MAPS_API_KEY") ?: ""
 
 android {
     namespace = "com.example.shops"
