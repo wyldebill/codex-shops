@@ -207,8 +207,17 @@ class _MapScreenState extends State<MapScreen> {
       _selectedLocation = location;
       _symbolsDirty = true; // Mark that symbols need refresh
     });
+    _refreshSymbols(); // Refresh symbols to show selection
 
     _animateTo(location.position, zoom: 16);
+  }
+
+  void _onSymbolTapped(Symbol symbol) {
+    // Find the location that matches this symbol
+    final symbolIndex = _symbols.indexOf(symbol);
+    if (symbolIndex >= 0 && symbolIndex < storeLocations.length) {
+      _selectLocation(storeLocations[symbolIndex]);
+    }
   }
 
   void _handleSearchChanged(String value) {
@@ -265,6 +274,7 @@ class _MapScreenState extends State<MapScreen> {
                     myLocationTrackingMode: MyLocationTrackingMode.none,
                     compassEnabled: false,
                     onStyleLoadedCallback: _refreshSymbols,
+                    onSymbolTapped: _onSymbolTapped,
                   ),
                   Positioned(
                     top: 16,
