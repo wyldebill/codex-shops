@@ -33,7 +33,6 @@ The full Google Maps implementation has been restored with **secure secrets mana
 
 ```yaml
 google_maps_flutter: ^2.10.0  # Maps widget
-flutter_dotenv: ^5.1.0        # Environment variable loading
 ```
 
 ### Platform Configuration
@@ -50,10 +49,7 @@ flutter_dotenv: ^5.1.0        # Environment variable loading
 
 1. **Initialization** - `main()` loads secrets from `.env`:
 ```dart
-void main() async {
-  await AppSecrets.init();  // Loads .env file
-  runApp(const MyApp());
-}
+See the GOOGLE_MAPS_API_KEY_SECURITY.md file
 ```
 
 2. **Map Display** - MapScreen widget shows the map:
@@ -69,9 +65,7 @@ GoogleMap(
 ```
 
 3. **Secure Access** - API key is accessed safely:
-```dart
-String apiKey = AppSecrets.googleMapsApiKey;
-```
+
 
 ## Security Status
 
