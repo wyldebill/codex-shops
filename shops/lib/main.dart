@@ -52,10 +52,17 @@ class _MapScreenState extends State<MapScreen> {
   int _selectedIndex = 1;
 
   // Track marker state separately to avoid rebuilding on every UI change
-  bool _markersDirty = true;
+  bool _symbolsDirty = true;
 
   // Slpy style URL - API key should be configured via platform-specific methods
   static const String _styleUrl = 'https://tiles.slpy.com/styles/slpy-maptiles/style.json';
+  
+  // Symbol display constants
+  static const String _markerIconName = 'marker-15';
+  static const double _selectedSymbolSize = 1.5;
+  static const double _defaultSymbolSize = 1.0;
+  static const double _symbolTextSize = 10.0;
+  static const Offset _symbolTextOffset = Offset(0, 1.5);
   
   static const LatLng _buffaloDowntown = LatLng(45.1718, -93.8746);
 
@@ -151,9 +158,9 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
-  void _refreshMarkers() async {
-    // Only rebuild markers if needed and controller is ready
-    if (!_markersDirty || mapController == null) return;
+  void _refreshSymbols() async {
+    // Only rebuild symbols if needed and controller is ready
+    if (!_symbolsDirty || mapController == null) return;
 
     // Clear existing symbols
     if (_symbols.isNotEmpty) {
@@ -168,23 +175,23 @@ class _MapScreenState extends State<MapScreen> {
       final symbol = await mapController!.addSymbol(
         SymbolOptions(
           geometry: location.position,
-          iconImage: 'marker-15',
-          iconSize: isSelected ? 1.5 : 1.0,
+          iconImage: _markerIconName,
+          iconSize: isSelected ? _selectedSymbolSize : _defaultSymbolSize,
           textField: location.name,
-          textOffset: const Offset(0, 1.5),
-          textSize: 10,
+          textOffset: _symbolTextOffset,
+          textSize: _symbolTextSize,
           textColor: '#000000',
         ),
       );
       _symbols.add(symbol);
     }
 
-    _markersDirty = false;
+    _symbolsDirty = false;
   }
 
   void _onMapCreated(MapLibreMapController controller) {
     mapController = controller;
-    _refreshMarkers();
+    _refreshSymbols();
   }
 
   void _zoomIn() {
@@ -198,7 +205,7 @@ class _MapScreenState extends State<MapScreen> {
   void _selectLocation(StoreLocation location) {
     setState(() {
       _selectedLocation = location;
-      _markersDirty = true; // Mark that markers need refresh
+      _symbolsDirty = true; // Mark that symbols need refresh
     });
 
     _animateTo(location.position, zoom: 16);
@@ -257,7 +264,7 @@ class _MapScreenState extends State<MapScreen> {
                     myLocationEnabled: true,
                     myLocationTrackingMode: MyLocationTrackingMode.none,
                     compassEnabled: false,
-                    onStyleLoadedCallback: _refreshMarkers,
+                    onStyleLoadedCallback: _refreshSymbols,
                   ),
                   Positioned(
                     top: 16,

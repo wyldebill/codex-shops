@@ -48,10 +48,8 @@ android {
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         
-        // Inject Slpy API key from .env file at build time
-        if (slpyApiKey.isNotEmpty()) {
-            manifestPlaceholders["SLPY_API_KEY"] = slpyApiKey
-        }
+        // Note: Slpy API key loaded above for potential future use
+        // MapLibre GL uses the API key differently than Google Maps
     }
 
     buildTypes {
