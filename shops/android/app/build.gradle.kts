@@ -6,9 +6,9 @@ plugins {
 }
 
 // Load API key from environment variable first, then fall back to .env file
-val googleMapsApiKey: String by lazy {
+val slpyApiKey: String by lazy {
     // First, try to get from environment variable (for CI/CD builds like Codemagic)
-    val envVarKey = System.getenv("GOOGLE_MAPS_API_KEY")
+    val envVarKey = System.getenv("SLPY_API_KEY")
     if (!envVarKey.isNullOrBlank()) {
         envVarKey
     } else {
@@ -16,7 +16,7 @@ val googleMapsApiKey: String by lazy {
         val envFile = file("../../.env")
         if (envFile.exists()) {
             val lines = envFile.readLines()
-            val apiKeyLine = lines.find { it.startsWith("GOOGLE_MAPS_API_KEY=") }
+            val apiKeyLine = lines.find { it.startsWith("SLPY_API_KEY=") }
             apiKeyLine?.substringAfter("=")?.trim() ?: ""
         } else {
             ""
@@ -48,10 +48,8 @@ android {
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         
-        // Inject Google Maps API key from .env file at build time
-        if (googleMapsApiKey.isNotEmpty()) {
-            manifestPlaceholders["GOOGLE_MAPS_API_KEY"] = googleMapsApiKey
-        }
+        // Note: Slpy API key loaded above for potential future use
+        // MapLibre GL uses the API key differently than Google Maps
     }
 
     buildTypes {
