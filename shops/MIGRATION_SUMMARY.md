@@ -69,7 +69,9 @@ Successfully migrated the Shops app from Google Maps Flutter to MapLibre GL usin
 
 **Method Changes:**
 - Renamed `_refreshMarkers()` to `_refreshSymbols()` for accuracy
-- Added `_onSymbolTapped()` to handle marker tap events
+- Implemented `_onMapClick()` to handle map taps using MapLibre's recommended approach
+- Uses `queryRenderedFeatures()` to detect symbol clicks instead of direct symbol tap callbacks
+- Symbol properties (name, index) used to match clicked features to locations
 - Updated `_selectLocation()` to call symbol refresh immediately
 
 ## Functionality Preserved
