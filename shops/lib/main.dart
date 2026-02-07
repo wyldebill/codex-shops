@@ -54,6 +54,9 @@ class _MapScreenState extends State<MapScreen> {
   // Track marker state separately to avoid rebuilding on every UI change
   bool _markersDirty = true;
 
+  // Slpy style URL - API key should be configured via platform-specific methods
+  static const String _styleUrl = 'https://tiles.slpy.com/styles/slpy-maptiles/style.json';
+  
   static const LatLng _buffaloDowntown = LatLng(45.1718, -93.8746);
 
   static const List<StoreLocation> storeLocations = [
@@ -146,7 +149,6 @@ class _MapScreenState extends State<MapScreen> {
       (location) => location.name == 'Biggs & Company',
       orElse: () => storeLocations.first,
     );
-    _refreshMarkers();
   }
 
   void _refreshMarkers() async {
@@ -251,7 +253,7 @@ class _MapScreenState extends State<MapScreen> {
                       target: _selectedLocation?.position ?? _buffaloDowntown,
                       zoom: 15.5,
                     ),
-                    styleString: 'https://tiles.slpy.com/styles/slpy-maptiles/style.json',
+                    styleString: _styleUrl,
                     myLocationEnabled: true,
                     myLocationTrackingMode: MyLocationTrackingMode.none,
                     compassEnabled: false,
