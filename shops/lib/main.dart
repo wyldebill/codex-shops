@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-// import 'package:shops/config/app_secrets.dart';
 
 void main() async {
-  // Initialize secure configuration (loads .env file)
-  // await AppSecrets.init();
   runApp(const MyApp());
 }
 
