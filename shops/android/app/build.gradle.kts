@@ -5,15 +5,22 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
-// Load API key from .env file
+// Load API key from environment variable first, then fall back to .env file
 val googleMapsApiKey: String by lazy {
-    val envFile = file("../../.env")
-    if (envFile.exists()) {
-        val lines = envFile.readLines()
-        val apiKeyLine = lines.find { it.startsWith("GOOGLE_MAPS_API_KEY=") }
-        apiKeyLine?.substringAfter("=")?.trim() ?: ""
+    // First, try to get from environment variable (for CI/CD builds like Codemagic)
+    val envVarKey = System.getenv("GOOGLE_MAPS_API_KEY")
+    if (!envVarKey.isNullOrBlank()) {
+        envVarKey
     } else {
-        ""
+        // Fall back to reading from .env file (for local development)
+        val envFile = file("../../.env")
+        if (envFile.exists()) {
+            val lines = envFile.readLines()
+            val apiKeyLine = lines.find { it.startsWith("GOOGLE_MAPS_API_KEY=") }
+            apiKeyLine?.substringAfter("=")?.trim() ?: ""
+        } else {
+            ""
+        }
     }
 }
 
