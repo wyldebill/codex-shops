@@ -24,8 +24,8 @@
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
-	<key>GOOGLE_MAPS_API_KEY</key>
-	<string>$(INJECTED_GOOGLE_MAPS_API_KEY)</string>
+	<key>SLPY_API_KEY</key>
+	<string>$(INJECTED_SLPY_API_KEY)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
