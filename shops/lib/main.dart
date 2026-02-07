@@ -169,7 +169,8 @@ class _MapScreenState extends State<MapScreen> {
     }
 
     // Add symbols for each location
-    for (var location in storeLocations) {
+    for (var i = 0; i < storeLocations.length; i++) {
+      final location = storeLocations[i];
       final isSelected = _selectedLocation?.name == location.name;
       
       final symbol = await mapController!.addSymbol(
@@ -182,6 +183,10 @@ class _MapScreenState extends State<MapScreen> {
           textSize: _symbolTextSize,
           textColor: '#000000',
         ),
+        {
+          'name': location.name,
+          'index': i,
+        },
       );
       _symbols.add(symbol);
     }
@@ -212,11 +217,22 @@ class _MapScreenState extends State<MapScreen> {
     _animateTo(location.position, zoom: 16);
   }
 
-  void _onSymbolTapped(Symbol symbol) {
-    // Find the location that matches this symbol
-    final symbolIndex = _symbols.indexOf(symbol);
-    if (symbolIndex >= 0 && symbolIndex < storeLocations.length) {
-      _selectLocation(storeLocations[symbolIndex]);
+  void _onMapClick(Point<double> point, LatLng coordinates) async {
+    // Query rendered features at the clicked point
+    final features = await mapController?.queryRenderedFeatures(point, [], null);
+    
+    if (features != null && features.isNotEmpty) {
+      // Check if any of the features is a symbol with our location data
+      for (var feature in features) {
+        final properties = feature['properties'];
+        if (properties != null && properties['index'] != null) {
+          final index = properties['index'] as int;
+          if (index >= 0 && index < storeLocations.length) {
+            _selectLocation(storeLocations[index]);
+            break;
+          }
+        }
+      }
     }
   }
 
@@ -274,7 +290,7 @@ class _MapScreenState extends State<MapScreen> {
                     myLocationTrackingMode: MyLocationTrackingMode.none,
                     compassEnabled: false,
                     onStyleLoadedCallback: _refreshSymbols,
-                    onSymbolTapped: _onSymbolTapped,
+                    onMapClick: _onMapClick,
                   ),
                   Positioned(
                     top: 16,
