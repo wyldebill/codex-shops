@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:maplibre_gl/maplibre_gl.dart';
 
 void main() async {
   runApp(const MyApp());
@@ -43,8 +43,8 @@ class MapScreen extends StatefulWidget {
 }
 
 class _MapScreenState extends State<MapScreen> {
-  GoogleMapController? mapController;
-  final Set<Marker> _markers = {};
+  MapLibreMapController? mapController;
+  final List<Symbol> _symbols = [];
   final TextEditingController _searchController = TextEditingController();
   StoreLocation? _selectedLocation;
   String _searchQuery = '';
@@ -52,8 +52,18 @@ class _MapScreenState extends State<MapScreen> {
   int _selectedIndex = 1;
 
   // Track marker state separately to avoid rebuilding on every UI change
-  bool _markersDirty = true;
+  bool _symbolsDirty = true;
 
+  // Slpy style URL - API key should be configured via platform-specific methods
+  static const String _styleUrl = 'https://tiles.slpy.com/styles/slpy-maptiles/style.json';
+  
+  // Symbol display constants
+  static const String _markerIconName = 'marker-15';
+  static const double _selectedSymbolSize = 1.5;
+  static const double _defaultSymbolSize = 1.0;
+  static const double _symbolTextSize = 10.0;
+  static const Offset _symbolTextOffset = Offset(0, 1.5);
+  
   static const LatLng _buffaloDowntown = LatLng(45.1718, -93.8746);
 
   static const List<StoreLocation> storeLocations = [
@@ -146,39 +156,47 @@ class _MapScreenState extends State<MapScreen> {
       (location) => location.name == 'Biggs & Company',
       orElse: () => storeLocations.first,
     );
-    _refreshMarkers();
   }
 
-  void _refreshMarkers() {
-    // Only rebuild markers if needed
-    if (!_markersDirty && _markers.isNotEmpty) return;
+  void _refreshSymbols() async {
+    // Only rebuild symbols if needed and controller is ready
+    if (!_symbolsDirty || mapController == null) return;
 
-    _markers
-      ..clear()
-      ..addAll(
-        storeLocations.map((location) {
-          final isSelected = _selectedLocation?.name == location.name;
+    // Clear existing symbols
+    if (_symbols.isNotEmpty) {
+      await mapController!.removeSymbols(_symbols);
+      _symbols.clear();
+    }
 
-          return Marker(
-            markerId: MarkerId(location.name),
-            position: location.position,
-            infoWindow: InfoWindow(
-              title: location.name,
-              snippet: '${location.address}\n${location.statusLabel}',
-            ),
-            icon: BitmapDescriptor.defaultMarkerWithHue(
-              isSelected ? BitmapDescriptor.hueAzure : location.iconHue,
-            ),
-            onTap: () => _selectLocation(location),
-          );
-        }),
+    // Add symbols for each location
+    for (var i = 0; i < storeLocations.length; i++) {
+      final location = storeLocations[i];
+      final isSelected = _selectedLocation?.name == location.name;
+      
+      final symbol = await mapController!.addSymbol(
+        SymbolOptions(
+          geometry: location.position,
+          iconImage: _markerIconName,
+          iconSize: isSelected ? _selectedSymbolSize : _defaultSymbolSize,
+          textField: location.name,
+          textOffset: _symbolTextOffset,
+          textSize: _symbolTextSize,
+          textColor: '#000000',
+        ),
+        {
+          'name': location.name,
+          'index': i,
+        },
       );
+      _symbols.add(symbol);
+    }
 
-    _markersDirty = false;
+    _symbolsDirty = false;
   }
 
-  void _onMapCreated(GoogleMapController controller) {
+  void _onMapCreated(MapLibreMapController controller) {
     mapController = controller;
+    _refreshSymbols();
   }
 
   void _zoomIn() {
@@ -192,10 +210,30 @@ class _MapScreenState extends State<MapScreen> {
   void _selectLocation(StoreLocation location) {
     setState(() {
       _selectedLocation = location;
-      _markersDirty = true; // Mark that markers need refresh
+      _symbolsDirty = true; // Mark that symbols need refresh
     });
+    _refreshSymbols(); // Refresh symbols to show selection
 
     _animateTo(location.position, zoom: 16);
+  }
+
+  void _onMapClick(Point<double> point, LatLng coordinates) async {
+    // Query rendered features at the clicked point
+    final features = await mapController?.queryRenderedFeatures(point, [], null);
+    
+    if (features != null && features.isNotEmpty) {
+      // Check if any of the features is a symbol with our location data
+      for (var feature in features) {
+        final properties = feature['properties'];
+        if (properties != null && properties['index'] != null) {
+          final index = properties['index'] as int;
+          if (index >= 0 && index < storeLocations.length) {
+            _selectLocation(storeLocations[index]);
+            break;
+          }
+        }
+      }
+    }
   }
 
   void _handleSearchChanged(String value) {
@@ -225,16 +263,14 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   void _animateTo(LatLng target, {double zoom = 13.5}) {
-    mapController?.animateCamera(CameraUpdate.newLatLngZoom(target, zoom));
+    mapController?.animateCamera(
+      CameraUpdate.newLatLngZoom(target, zoom),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-
-    // Refresh markers only if they're marked as dirty
-    // This happens outside setState to avoid unnecessary rebuilds
-    _refreshMarkers();
 
     return Scaffold(
       body: SafeArea(
@@ -243,19 +279,18 @@ class _MapScreenState extends State<MapScreen> {
             Expanded(
               child: Stack(
                 children: [
-                  GoogleMap(
+                  MapLibreMap(
                     onMapCreated: _onMapCreated,
                     initialCameraPosition: CameraPosition(
                       target: _selectedLocation?.position ?? _buffaloDowntown,
                       zoom: 15.5,
                     ),
-                    markers: _markers,
-                    mapType: MapType.normal,
+                    styleString: _styleUrl,
                     myLocationEnabled: true,
-                    myLocationButtonEnabled: false,
-                    zoomControlsEnabled: false,
+                    myLocationTrackingMode: MyLocationTrackingMode.none,
                     compassEnabled: false,
-                    trafficEnabled: false,
+                    onStyleLoadedCallback: _refreshSymbols,
+                    onMapClick: _onMapClick,
                   ),
                   Positioned(
                     top: 16,
